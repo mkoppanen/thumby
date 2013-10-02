@@ -19,7 +19,9 @@ Building and running
 
 At the moment the following command should do it:
 
-    gcc -o thumby `pkg-config --cflags MagickWand` src/main.c `pkg-config --libs MagickWand` -levent -Wall
+    autoreconf -ifv
+    ./configure
+    make
 
 To run it do the following:
 
