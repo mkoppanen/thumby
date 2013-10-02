@@ -240,6 +240,7 @@ static void
 s_create_thumbnail_cb (struct evhttp_request *req, void *arg)
 {
     MagickWand *magick_wand = (MagickWand *) arg;
+
     const char *req_uri = evhttp_request_get_uri (req);
 
     char *filename = NULL;
@@ -320,10 +321,45 @@ error_reply:
     return;
 }
 
+static
 void *s_dispatch (void *arg)
 {
     event_base_dispatch ((struct event_base *) arg);
     return NULL;
+}
+
+static
+void s_time_to_go (evutil_socket_t sig, short events, void *user_data)
+{
+    struct event_base *base = user_data;
+    struct timeval delay = { 2, 0 };
+
+    event_base_loopexit(base, &delay);
+}
+
+static
+bool s_daemonize ()
+{
+    signal(SIGINT, SIG_IGN);
+    signal(SIGKILL, SIG_IGN);
+
+    int rc = fork ();
+    if (rc == -1) {
+        fprintf (stderr, "Failed to fork: %s\n", strerror (errno));
+        return false;
+    }
+
+    if (rc == 0) {
+        fclose(stdin);
+        fclose(stdout);
+        fclose(stderr);
+    } else {
+        // parent
+        signal(SIGINT, SIG_DFL);
+        signal(SIGKILL, SIG_DFL);
+        exit(0);
+    }
+    return true;
 }
 
 int main (int argc, char **argv)
@@ -331,7 +367,6 @@ int main (int argc, char **argv)
     MagickWandGenesis ();
     int port = DEFAULT_PORT;
     const char *images_dir = "./";
-
 
     if (argc > 1) {
         images_dir = argv [1];
@@ -352,6 +387,9 @@ int main (int argc, char **argv)
 
     fprintf (stderr, "Serving images from %s on 0.0.0.0:%d\n", images_dir, port);
 
+    if (s_daemonize () == false)
+        return 1;
+
     int fd = s_bind_socket (port, 1024);
     size_t thread_count = THREAD_POOL_SIZE;
 
@@ -368,10 +406,19 @@ int main (int argc, char **argv)
         int rc = evhttp_accept_socket (http, fd);
         assert (rc == 0);
 
+        struct event *signal_event = evsignal_new (base, SIGINT, s_time_to_go, base);
+        event_add (signal_event, NULL);
+
+        signal_event = evsignal_new (base, SIGHUP, s_time_to_go, base);
+        event_add (signal_event, NULL);
+
+        signal_event = evsignal_new (base, SIGTERM, s_time_to_go, base);
+        event_add (signal_event, NULL);
+
         MagickWand *magick_wand = NewMagickWand ();
         evhttp_set_gencb (http, s_create_thumbnail_cb, magick_wand);
 
-        rc = pthread_create(&ths[i], NULL, s_dispatch, base);
+        rc = pthread_create (&ths[i], NULL, s_dispatch, base);
         assert (rc == 0);
     }
 
