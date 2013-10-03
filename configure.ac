@@ -55,7 +55,7 @@ AC_ARG_WITH(libevent,
             if test "$withval" = "yes"; then
                 AC_MSG_ERROR(Usage: --with-libevent=PATH)
             fi
-            LIBEVENT_PATH="$withval"
+            LIBEVENT_PATH="${withval}:${withval}/lib/pkgconfig"
         ])
 
 AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
@@ -65,7 +65,7 @@ if test "x$PKG_CONFIG" = "xno"; then
 fi
 
 ORIG_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
-export PKG_CONFIG_PATH="$LIBEVENT_PATH:$LIBEVENT_PATH/lib/pkgconfig"
+export PKG_CONFIG_PATH="$LIBEVENT_PATH"
 
 AC_MSG_CHECKING([for libevent])
 if $PKG_CONFIG --exists libevent; then
