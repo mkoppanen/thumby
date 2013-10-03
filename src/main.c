@@ -28,6 +28,8 @@
 +-----------------------------------------------------------------------------------+
 */
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,11 +54,6 @@
 #include <unistd.h>
 
 #include <wand/MagickWand.h>
-
-#define THREAD_POOL_SIZE 4
-
-#define MAX_THUMBNAIL_WIDTH 1920
-#define MAX_THUMBNAIL_HEIGHT 1080
 
 #define DEFAULT_PORT 8800
 
@@ -264,10 +261,10 @@ s_create_thumbnail_cb (struct evhttp_request *req, void *arg)
         if (evhttp_parse_query (req_uri, &values) == 0) {
             long width = 0, height = 0;
 
-            if ((width = s_find_header_long (&values, "w")) < 0 || width > MAX_THUMBNAIL_WIDTH)
+            if ((width = s_find_header_long (&values, "w")) < 0 || width > THUMBY_MAX_WIDTH)
                 width = 0;
 
-            if ((height = s_find_header_long (&values, "h")) < 0 || height > MAX_THUMBNAIL_HEIGHT)
+            if ((height = s_find_header_long (&values, "h")) < 0 || height > THUMBY_MAX_HEIGHT)
                 height = 0;
 
             if (MagickReadImage (magick_wand, filename) != MagickTrue) {
@@ -391,12 +388,11 @@ int main (int argc, char **argv)
         return 1;
 
     int fd = s_bind_socket (port, 1024);
-    size_t thread_count = THREAD_POOL_SIZE;
 
-    pthread_t ths [thread_count];
+    pthread_t ths [THUMBY_THREAD_COUNT];
 
     int i;
-    for (i = 0; i < thread_count; i++) {
+    for (i = 0; i < THUMBY_THREAD_COUNT; i++) {
         struct event_base *base = event_base_new ();
         assert (base);
 
@@ -422,7 +418,7 @@ int main (int argc, char **argv)
         assert (rc == 0);
     }
 
-    for (i = 0; i < thread_count; i++) {
+    for (i = 0; i < THUMBY_THREAD_COUNT; i++) {
         pthread_join (ths[i], NULL);
     }
 

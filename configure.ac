@@ -6,6 +6,8 @@ AM_INIT_AUTOMAKE([1.6 foreign subdir-objects])
 AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
+AC_CONFIG_HEADERS([src/config.h])
+
 ###############################
 # Check for ImageMagick
 ###############################
@@ -80,6 +82,44 @@ else
 fi
 
 PKG_CONFIG_PATH="$ORIG_PKG_CONFIG_PATH"
+
+###############################
+# Misc options
+###############################
+THREAD_COUNT=4
+MAX_WIDTH=1920
+MAX_HEIGHT=1080
+
+AC_ARG_WITH(thread-count,
+        [ --with-thread-count=N      How many handler threads to run], [
+            if test $withval -eq $withval 2>/dev/null; then
+                THREAD_COUNT=$withval
+            else
+                AC_MSG_ERROR(Usage: --with-thread-count=N)
+            fi
+        ])
+
+AC_ARG_WITH(max-width,
+        [ --with-max-width=N      Maximum width of thumbnail], [
+            if test $withval -eq $withval 2>/dev/null; then
+                MAX_WIDTH=$withval
+            else
+                AC_MSG_ERROR(Usage: --with-max-width=N)
+            fi
+        ])
+
+AC_ARG_WITH(max-height,
+        [ --with-max-height=N      Maximum height of thumbnail], [
+            if test $withval -eq $withval 2>/dev/null; then
+                MAX_HEIGHT=$withval
+            else
+                AC_MSG_ERROR(Usage: --with-max-height=N)
+            fi
+        ])
+
+AC_DEFINE_UNQUOTED([THUMBY_THREAD_COUNT], $THREAD_COUNT, [Thread count])
+AC_DEFINE_UNQUOTED([THUMBY_MAX_WIDTH],    $MAX_WIDTH,    [Maximum width of thumbnail])
+AC_DEFINE_UNQUOTED([THUMBY_MAX_HEIGHT],   $MAX_HEIGHT,   [Maximum height of thumbnail])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
